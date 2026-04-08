@@ -53,7 +53,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         User/Algorithm/alg_OLS.c
         User/BSP/bsp_can.c
         User/Task/task_start.cpp
-        User/Task/task_identify.cpp
+        User/Task/task_feedforward.cpp
+        User/Task/task_ctrl.cpp
 )
 
 # Add include paths
