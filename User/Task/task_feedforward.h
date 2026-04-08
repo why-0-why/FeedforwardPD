@@ -1,12 +1,9 @@
 /**
-******************************************************************************
- * @file           : XXX.h
+ ******************************************************************************
+ * @file           : task_feedforward.h
  * @author         : WHY
- * @date           : 2025-10-12
- * @brief          : XXX.c 的头文件
- *                   包含XXX的宏定义
- *                   XXX的变量类型声明
- *                   XXX的函数声明
+ * @date           : 2026-4-3
+ * @brief          : task_feedforward.cpp 的头文件
  ******************************************************************************
  * @attention
  *
@@ -14,8 +11,8 @@
  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef TASK_IDENTIFY_H
-#define TASK_IDENTIFY_H
+#ifndef TASK_FEEDFORWARD_H
+#define TASK_FEEDFORWARD_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -33,10 +30,10 @@ extern "C" {
 /* Exported variables --------------------------------------------------------*/
 
 /* Exported functions prototypes ---------------------------------------------*/
-void TASK_Identify(void const* argument);
-void TASK_IdentifyInit();
+void TASK_Feedforward(void const* argument);
+void TASK_FeedforwardInit();
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* TASK_IDENTIFY_H */
+#endif  /* TASK_FEEDFORWARD_H */
