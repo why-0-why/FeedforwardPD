@@ -102,7 +102,7 @@ void MX_FREERTOS_Init(void) {
 
   /* Create the thread(s) */
   /* definition and creation of TaskStart */
-  osThreadDef(TaskStart, TASK_Start, osPriorityNormal, 0, 128);
+  osThreadDef(TaskStart, TASK_Start, osPriorityNormal, 0, 256);
   TaskStartHandle = osThreadCreate(osThread(TaskStart), NULL);
 
   /* USER CODE BEGIN RTOS_THREADS */
