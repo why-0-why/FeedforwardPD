@@ -25,8 +25,9 @@ extern "C" {
 /* Exported types ------------------------------------------------------------*/
 typedef enum
 {
-    SAFETY = 0,
-    NORMAL = 1,
+    SAFETY = 0,//安全模式
+    NORMAL,//正常模式
+    IDENTIFY,//辨识模式
 } ENU_Mode;
 
 /* Exported constants --------------------------------------------------------*/
