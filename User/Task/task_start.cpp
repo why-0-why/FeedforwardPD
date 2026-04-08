@@ -19,7 +19,7 @@
 #include "arm_math.h"
 #include "bsp_can.h"
 #include "cmsis_os.h"
-#include "drv_dmMotor.h"
+#include "dvc_dmMotor.h"
 #include "task_ctrl.h"
 #include "task_feedforward.h"
 /* Private typedef -----------------------------------------------------------*/

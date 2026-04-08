@@ -49,7 +49,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
         User/Drive/drv_fifo.c
-        User/Drive/drv_dmMotor.c
+        User/Device/dvc_dmMotor.c
         User/Algorithm/alg_OLS.c
         User/BSP/bsp_can.c
         User/Task/task_start.cpp

@@ -1,12 +1,10 @@
 /**
 ******************************************************************************
- * @file           : XXX.h
+ * @file           : dvc_dmMotor.h
  * @author         : WHY
- * @date           : 2025-10-12
- * @brief          : XXX.c 的头文件
- *                   包含XXX的宏定义
- *                   XXX的变量类型声明
- *                   XXX的函数声明
+ * @date           : 2026-4-8
+ * @brief          : dvc_dmMotor.c 的头文件
+ *
  ******************************************************************************
  * @attention
  *
@@ -14,8 +12,8 @@
  */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef XXX_H
-#define XXX_H
+#ifndef DVC_DMMOTOR_H
+#define DVC_DMMOTOR_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -57,7 +55,8 @@ typedef struct
     int t_int;
     int kp_int;
     int kd_int;
-    float pos;
+    float pos_rad;//弧度制
+    float pos_deg;//角度制
     float vel;
     float tor;
     float Kp;
@@ -113,4 +112,4 @@ void COMM_dmMotorSpeedCtrl(CAN_HandleTypeDef* hcan, uint16_t motor_id, float vel
 }
 #endif
 
-#endif //XXX_H
+#endif //DVC_DMMOTOR_H

@@ -1,13 +1,11 @@
 /**
 ******************************************************************************
- * @file           : XXX.c
+ * @file           : dvc_dmMotor.c
  * @author         : WHY
- * @date           : 2025-10-12
- * @brief          : XXX的驱动模块
+ * @date           : 2026-4-8
+ * @brief          : 达妙电机的驱动模块
  *
- * 本文件提供了XXX的初始化函数和控制函数：
- *     - XXX_Init(): 初始化XXX的对象，配置为模式
- *     - XXX_show(): 根据输入的XX值控制XXX显示
+ * 本文件提供了达妙电机的初始化函数和控制函数
  ******************************************************************************
  * @attention
  *
@@ -15,8 +13,9 @@
  */
 
 /* Includes ------------------------------------------------------------------*/
-#include "drv_dmMotor.h"
+#include "dvc_dmMotor.h"
 /* Private includes ----------------------------------------------------------*/
+#include "arm_math.h"
 
 /* Private typedef -----------------------------------------------------------*/
 
@@ -181,7 +180,8 @@ void DATA_dmMortorFbdata(STR_dmMotor* motor, uint8_t* rx_data)
     motor->para.p_int = (rx_data[1] << 8) | rx_data[2];
     motor->para.v_int = (rx_data[3] << 4) | (rx_data[4] >> 4);
     motor->para.t_int = ((rx_data[4] & 0xF) << 8) | rx_data[5];
-    motor->para.pos = DATA_Uint2Float(motor->para.p_int, P_MIN, P_MAX, 16); // (-12.5,12.5)
+    motor->para.pos_rad = DATA_Uint2Float(motor->para.p_int, P_MIN, P_MAX, 16); // (-12.5,12.5)
+    motor->para.pos_deg = motor->para.pos_rad / M_PI * 180.0;
     motor->para.vel = DATA_Uint2Float(motor->para.v_int, V_MIN, V_MAX, 12); // (-45.0,45.0)
     motor->para.tor = DATA_Uint2Float(motor->para.t_int, T_MIN, T_MAX, 12); // (-18.0,18.0)
     motor->para.Tmos = (float)(rx_data[6]);

@@ -16,7 +16,7 @@
 /* Private includes ----------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-#include "drv_dmMotor.h"
+#include "dvc_dmMotor.h"
 #include "task_start.h"
 /* Private typedef -----------------------------------------------------------*/
 
