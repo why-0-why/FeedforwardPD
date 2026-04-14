@@ -27,7 +27,7 @@ extern "C" {
 #define MIT_CMD 		0x000
 #define POS_CMD			0x100
 #define SPEED_CMD		0x200
-#define MST_ID 			0x000 //反馈帧默认000
+#define MST_ID 			0x052 //反馈帧默认000
 
 #define MIT_MODE 			0x000
 #define POS_MODE 			0x001
