@@ -27,6 +27,7 @@ typedef enum
 {
     SAFETY = 0,//安全模式
     NORMAL,//正常模式
+    FOLLOW,//跟随模式
     IDENTIFY,//辨识模式
 } ENU_Mode;
 
