@@ -48,12 +48,18 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-        User/Drive/drv_fifo.c
-        User/Device/dvc_dmMotor.c
-        User/Algorithm/alg_OLS.c
         User/BSP/bsp_can.c
+        User/Drive/drv_fifo.c
+
+        User/Device/dvc_dmMotor.c
+
+        User/Algorithm/alg_OLS.c
+        User/Algorithm/alg_lowpass.c
+        User/Algorithm/alg_cubicfit.c
+        User/Algorithm/alg_inertia.c
+
         User/Task/task_start.cpp
-        User/Task/task_feedforward.cpp
+        User/Task/task_identify.cpp
         User/Task/task_ctrl.cpp
 )
 
