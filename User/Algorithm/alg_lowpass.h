@@ -35,6 +35,13 @@ typedef struct {
 void DATA_LowpassInit(STR_LowPass *filter, float fc, float fs);
 
 /**
+ * @brief 设置滤波器参数
+ * @param filter 滤波器结构体指针
+ * @param alpha 滤波系数
+ * @param y_prev 上一次输出值
+ */
+void DATA_LowpassSet(STR_LowPass *filter, float alpha,float y_prev);
+/**
  * @brief 对输入值进行滤波
  * @param filter 滤波器结构体指针
  * @param x 当前输入值

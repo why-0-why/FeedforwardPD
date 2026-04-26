@@ -39,6 +39,12 @@ void DATA_LowpassInit(STR_LowPass *filter, float fc, float fs) {
     filter->y_prev = 0.0f;
 }
 
+void DATA_LowpassSet(STR_LowPass *filter, float alpha,float y_prev)
+{
+    filter->alpha  = alpha;
+    filter->y_prev = y_prev;
+}
+
 float DATA_LowpassUpdate(STR_LowPass *filter, float x) {
     // y[n] = α * x[n] + (1-α) * y[n-1]
     float y = filter->alpha * x + (1.0f - filter->alpha) * filter->y_prev;
