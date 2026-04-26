@@ -15,7 +15,6 @@
 #include "task_start.h"
 /* Private includes ----------------------------------------------------------*/
 #include "main.h"
-#include "alg_OLS.h"
 #include "arm_math.h"
 #include "bsp_can.h"
 #include "cmsis_os.h"
@@ -36,7 +35,7 @@ OBJ_CAN o_can1;
 uint8_t a_can1TxFIFOBuff[CAN_TX_FIFO_SIZE]; ///< CAN1发送FIFO缓冲区
 STR_dmMotor s_dmMotor1;
 /* Exported variables --------------------------------------------------------*/
-extern float32_t a_theta[2];
+extern float32_t a_estG[2];
 /* Private function prototypes -----------------------------------------------*/
 static void DATA_CAN1CallBack(uint32_t std_id, uint8_t* data, uint32_t dlc);
 static void DATA_MotorInit();
@@ -96,6 +95,6 @@ void DATA_MotorInit()
     s_dmMotor1.id = 1;
     s_dmMotor1.ctrl.mode = MIT_MODE;
     DATA_dmMotorInitCmdCtrl(&s_dmMotor1);
-    s_dmMotor1.ctrl.kp_set = 50;
+    s_dmMotor1.ctrl.kp_set = 100;
     s_dmMotor1.ctrl.kd_set = 0.5;
 }

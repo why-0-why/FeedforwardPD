@@ -21,6 +21,7 @@
 #include "task_start.h"
 #include "alg_lowpass.h"
 #include "alg_cubicfit.h"
+#include "alg_gravity.h"
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
@@ -29,40 +30,39 @@
 
 /* Private variables ---------------------------------------------------------*/
 osThreadId h_TaskCTRL;
-static STR_LowPass s_lowPassFilter;
+static STR_LowPass    s_lowPassFilter;
 static STR_CubicCoeffs s_cubicCoeffs;
-static uint32_t i_period=4000;
-float sinpos[3]={0};//单位rad,rad/s,rad/s^2
+static uint32_t u_followPeriod = 4000;
+static float32_t a_sinPos[3] = {0}; /**< 正弦曲线：[pos(rad), vel(rad/s), acc(rad/s²)] */
+
 /* Exported variables --------------------------------------------------------*/
 extern STR_dmMotor s_dmMotor1;
-extern ENU_Mode e_mode;
-float32_t a_theta[2] = {0.0971329957, -0.318323165}; //测量得到的参数
-float32_t J=0.000139336596;
-float32_t B=0.0662943497;
-float32_t ff;
-uint8_t i_ffable=0;
+extern ENU_Mode    e_mode;
+float32_t a_estG[2]       = {0.0971329957f, -0.318323165f}; /**< 重力辨识参数 [θ₁, θ₂] */
+float32_t f_estJ          = 0.000139336596f;                 /**< 辨识等效转动惯量 (kg·m²) */
+float32_t f_estB          = 0.0662943497f;                   /**< 辨识粘滞摩擦系数 (N·m·s/rad) */
+float32_t f_feedforwardTor = 0.0f;                           /**< 当前前馈力矩 (N·m) */
+uint8_t   u_ffMode        = 0;                               /**< 前馈模式：0=无, 1=重力, 2=重力+惯量 */
+
 /* Private function prototypes -----------------------------------------------*/
 static void TASK_ModeSwitch();
 static void TASK_SafetyMode();
 static void TASK_NormalMode();
 static void TASK_FollowMode();
-static float rand_curve();
-static void sin_curve(float t);
-/* Private user code ---------------------------------------------------------*/
+static float32_t CALC_RandCurve();
+static void CALC_SinCurve(float32_t t);
 
+/* Private user code ---------------------------------------------------------*/
 
 void TASK_CTRLInit()
 {
-    /* 定义检测任务属性 */
+    CTRL_dmMotorEnable(&hcan1, &s_dmMotor1);
     osThreadDef(TaskCTRL, TASK_CTRL, osPriorityNormal, 0, 256);
-    /* 创建检测任务 */
     h_TaskCTRL = osThreadCreate(osThread(TaskCTRL), NULL);
 }
 
 /**
- * @brief          任务-初始化硬件和启动其他任务
- * @param[in]      void
- * @return         void
+ * @brief  任务-控制（周期执行）
  */
 void TASK_CTRL(void const* argument)
 {
@@ -83,22 +83,17 @@ void TASK_CTRL(void const* argument)
             TASK_FollowMode();
             break;
         case IDENTIFY:
-            float32_t f_posSin = 0;
-            float32_t f_posCos = 0;
-            f_posCos = cosf(s_dmMotor1.para.pos_rad);
-            f_posSin = sinf(s_dmMotor1.para.pos_rad);
-
-            ff = a_theta[0] * f_posCos + a_theta[1] * f_posSin;//重力补偿
+            f_feedforwardTor = DATA_GravityCalcFF(a_estG, s_dmMotor1.para.pos_rad);
             break;
         }
-        if (e_mode==NORMAL||e_mode==FOLLOW)
-            osDelayUntil(&period, 10); //100hz
-        else if (e_mode==IDENTIFY)
-            osDelayUntil(&period, 1); //1khz
+        if (e_mode == NORMAL || e_mode == FOLLOW)
+            osDelayUntil(&period, 10); /* 100 Hz */
+        else if (e_mode == IDENTIFY)
+            osDelayUntil(&period, 1);  /* 1 kHz  */
     }
 }
 
-void TASK_ModeSwitch()
+static void TASK_ModeSwitch()
 {
     static ENU_Mode e_modeBuf = SAFETY;
     if (e_modeBuf != e_mode)
@@ -114,103 +109,95 @@ void TASK_ModeSwitch()
             CTRL_dmMotorEnable(&hcan1, &s_dmMotor1);
             break;
         case FOLLOW:
-            DATA_CalcCubicCoeffs(0,M_PI, 0, 0, i_period/2, &s_cubicCoeffs);
+            DATA_CalcCubicCoeffs(0, M_PI, 0, 0, u_followPeriod / 2, &s_cubicCoeffs);
             CTRL_dmMotorEnable(&hcan1, &s_dmMotor1);
+            break;
+        default:
             break;
         }
     }
 }
 
-
-void TASK_SafetyMode()
+static void TASK_SafetyMode()
 {
     DATA_dmMotorInitCmdCtrl(&s_dmMotor1);
     CTRL_dmMotorDisable(&hcan1, &s_dmMotor1);
 }
 
-void TASK_NormalMode()
+static void TASK_NormalMode()
 {
-    static uint8_t iKeyBuf = 1;
-    if (iKeyBuf != HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin)) //按键切换失能使能
+    static uint8_t u_keyBuf = 1;
+    if (u_keyBuf != HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin))
     {
-        iKeyBuf = HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin);
-        if (!iKeyBuf)
+        u_keyBuf = HAL_GPIO_ReadPin(KEY_GPIO_Port, KEY_Pin);
+        if (!u_keyBuf)
         {
             if (s_dmMotor1.ctrl.kp_set > 0)
             {
-                s_dmMotor1.ctrl.kp_set = 0;
-                s_dmMotor1.ctrl.kd_set = 0;
-                s_dmMotor1.ctrl.pos_set = s_dmMotor1.para.pos_rad;
-                CTRL_dmMotorEnable(&hcan1, &s_dmMotor1);
+                s_dmMotor1.ctrl.kp_set  = 0;
+                s_dmMotor1.ctrl.kd_set  = 0;
             }
             else
             {
-                s_dmMotor1.ctrl.kp_set = 100;
-                s_dmMotor1.ctrl.kd_set = 0.5;
-                s_dmMotor1.ctrl.pos_set = s_dmMotor1.para.pos_rad;
-                CTRL_dmMotorEnable(&hcan1, &s_dmMotor1);
+                s_dmMotor1.ctrl.kp_set  = 100;
+                s_dmMotor1.ctrl.kd_set  = 0.5;
             }
+            s_dmMotor1.ctrl.pos_set = s_dmMotor1.para.pos_rad;
+            CTRL_dmMotorEnable(&hcan1, &s_dmMotor1);
         }
     }
+    f_feedforwardTor  = DATA_GravityCalcFF(a_estG, s_dmMotor1.para.pos_rad);
+    f_feedforwardTor += f_estB * s_dmMotor1.para.vel / 3.0f ; /* 速度补偿 */
+    s_dmMotor1.ctrl.tor_set = f_feedforwardTor;
     CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
 }
 
-void TASK_FollowMode()
+static void TASK_FollowMode()
 {
-    sin_curve(HAL_GetTick()/1000.0);
-    s_dmMotor1.ctrl.pos_set = sinpos[0];
-    s_dmMotor1.ctrl.vel_set = 3*sinpos[1];
-    float32_t f_posSin = 0;
-    float32_t f_posCos = 0;
-    f_posCos = cosf(s_dmMotor1.para.pos_rad);
-    f_posSin = sinf(s_dmMotor1.para.pos_rad);
+    CALC_SinCurve(HAL_GetTick() / 1000.0f);
+    s_dmMotor1.ctrl.pos_set = a_sinPos[0];
+    s_dmMotor1.ctrl.vel_set = 3.0f * a_sinPos[1];
 
-    if (i_ffable==2)
+    if (u_ffMode == 2)
     {
-        ff = a_theta[0] * f_posCos + a_theta[1] * f_posSin;//重力补偿
-        ff +=J*sinpos[2]+B*sinpos[1];//惯量补偿
-    }else if (i_ffable==1)
+        f_feedforwardTor  = DATA_GravityCalcFF(a_estG, s_dmMotor1.para.pos_rad);
+        f_feedforwardTor += f_estJ * a_sinPos[2] + f_estB * a_sinPos[1]; /* 惯量补偿 */
+    }
+    else if (u_ffMode == 1)
     {
-        ff = a_theta[0] * f_posCos + a_theta[1] * f_posSin;//重力补偿
+        f_feedforwardTor = DATA_GravityCalcFF(a_estG, s_dmMotor1.para.pos_rad);
     }
     else
     {
-        ff=0;
+        f_feedforwardTor = 0.0f;
     }
-    s_dmMotor1.ctrl.tor_set = ff;
-
+    s_dmMotor1.ctrl.tor_set = f_feedforwardTor;
     CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
 }
 
 /**
- *
- * @return 随机平滑变换位置曲线
+ * @brief  生成随机平滑位置曲线
+ * @retval 当前目标位置 (rad)
  */
-float rand_curve()
+static float32_t CALC_RandCurve()
 {
-    static float pos = 0;
-
-    float increment = ((float)rand() / RAND_MAX) * (0.01 - (-0.01)) - 0.01; // 生成(-0.5, 0.5)的随机增量
-    pos += increment;
-
-    // 限幅到 [-2π, 2π]
-    if (pos > 2.0 * M_PI)
-        pos = 2.0 * M_PI;
-    else if (pos < -2.0 * M_PI)
-        pos = -2.0 * M_PI;
-    return DATA_LowpassUpdate(&s_lowPassFilter, pos);
+    static float32_t f_pos = 0.0f;
+    float32_t f_inc = ((float32_t)rand() / RAND_MAX) * 0.02f - 0.01f;
+    f_pos += f_inc;
+    if (f_pos >  2.0f * M_PI) f_pos =  2.0f * M_PI;
+    if (f_pos < -2.0f * M_PI) f_pos = -2.0f * M_PI;
+    return DATA_LowpassUpdate(&s_lowPassFilter, f_pos);
 }
 
 /**
- * @param t 时间
- * @return 按时间运行的正弦曲线
+ * @brief  生成正弦激励曲线，结果写入 a_sinPos
+ * @param  t  时间 (s)
  */
-void sin_curve(float t)
+static void CALC_SinCurve(float32_t t)
 {
-    static float omega=2*M_PI/3;//sin曲线角速度
-    static float amp=M_PI;//幅值
-
-    sinpos[0]=amp*sinf(omega*t);
-    sinpos[1]=amp*omega*cosf(omega*t);
-    sinpos[2]=-amp*omega*omega*sinf(omega*t);
+    static const float32_t f_omega = 2.0f * M_PI / 3.0f;
+    static const float32_t f_amp   = M_PI;
+    a_sinPos[0] =  f_amp * sinf(f_omega * t);
+    a_sinPos[1] =  f_amp * f_omega * cosf(f_omega * t);
+    a_sinPos[2] = -f_amp * f_omega * f_omega * sinf(f_omega * t);
 }

@@ -1,47 +1,43 @@
 
 
-Breakpoint=D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_identify.cpp:117, State=BP_STATE_DISABLED
+Breakpoint=D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_identify.cpp:118:25, State=BP_STATE_DISABLED
 GraphedExpression="((s_dmMotor1).para).tor", Color=#a00909
-GraphedExpression="ff", Color=#09a01b
-GraphedExpression="((s_dmMotor1).para).pos_rad", Color=#09a087
-GraphedExpression="s_dmMotor1.ctrl.pos_set", Color=#ff5500
-GraphedExpression="s_dmMotor1.ctrl.vel_set", Color=#0964a0
-GraphedExpression="((s_dmMotor1).para).vel", Color=#094fa0
-OpenDocument="alg_OLS.c", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Algorithm/alg_OLS.c", Line=41
-OpenDocument="task_identify.cpp", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_identify.cpp", Line=108
+GraphedExpression="((s_dmMotor1).para).pos_rad", Color=#09a01b
+GraphedExpression="s_dmMotor1.ctrl.pos_set", Color=#09a087
+GraphedExpression="s_dmMotor1.ctrl.vel_set", Color=#ff5500
+GraphedExpression="((s_dmMotor1).para).vel", Color=#0964a0
+GraphedExpression="f_feedforwardTor", Color=#094fa0
+OpenDocument="stm32f4xx_it.c", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/Core/Src/stm32f4xx_it.c", Line=81
 OpenDocument="main.c", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/Core/Src/main.c", Line=61
-OpenDocument="task_ctrl.cpp", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_ctrl.cpp", Line=90
+OpenDocument="task_identify.cpp", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_identify.cpp", Line=108
+OpenDocument="alg_OLS.c", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Algorithm/alg_OLS.c", Line=41
+OpenDocument="task_ctrl.cpp", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_ctrl.cpp", Line=75
 OpenDocument="task_ctrl.h", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_ctrl.h", Line=0
 OpenDocument="task_start.cpp", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_start.cpp", Line=54
-OpenDocument="tasks.c", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/Middlewares/Third_Party/FreeRTOS/Source/tasks.c", Line=3631
+OpenDocument="tasks.c", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/Middlewares/Third_Party/FreeRTOS/Source/tasks.c", Line=3423
 OpenDocument="task_start.h", FilePath="D:/Documents/100Cache_repository/STM32F4Project/FeedforwardPD/User/Task/task_start.h", Line=7
 OpenToolbar="Debug", Floating=0, x=0, y=0
-OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=300, h=366, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
-OpenWindow="Source Files", DockArea=LEFT, x=0, y=0, w=913, h=356, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=300, h=315, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=1, w=913, h=325, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
-OpenWindow="Data Sampling", DockArea=BOTTOM, x=1, y=0, w=429, h=651, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VisibleTab=0, UniformSampleSpacing=0
-OpenWindow="Timeline", DockArea=BOTTOM, x=2, y=0, w=1617, h=651, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=1, DataPaneShown=1, PowerPaneShown=0, CodePaneShown=0, PinCursor="Cursor Movable", TimePerDiv="1 s / Div", TimeStampFormat="Time", DataGraphDrawAsPoints=0, DataGraphLegendShown=1, DataGraphUniformSampleSpacing=0, DataGraphLegendPosition="1120;0", PowerGraphDrawAsPoints=0, PowerGraphLegendShown=0, PowerGraphAvgFilterTime=Off, PowerGraphAvgFilterLen=Off, PowerGraphUniformSampleSpacing=0, PowerGraphLegendPosition="1396;-69", CodeGraphLegendShown=0, CodeGraphLegendPosition="1412;0"
-OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=512, h=651, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Registers 1", DockArea=RIGHT, x=0, y=1, w=300, h=472, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, FilteredItems=[], RefreshRate=1
+OpenWindow="Source Files", DockArea=LEFT, x=0, y=0, w=692, h=307, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Disassembly", DockArea=RIGHT, x=0, y=0, w=300, h=196, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Memory 1", DockArea=BOTTOM, x=3, y=0, w=168, h=651, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, EditorAddress=0x0
+OpenWindow="Watched Data 1", DockArea=LEFT, x=0, y=1, w=692, h=361, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
+OpenWindow="Data Sampling", DockArea=BOTTOM, x=1, y=0, w=317, h=651, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0, VisibleTab=0, UniformSampleSpacing=0
+OpenWindow="Timeline", DockArea=BOTTOM, x=2, y=0, w=673, h=651, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=1, DataPaneShown=1, PowerPaneShown=0, CodePaneShown=0, PinCursor="Cursor Movable", TimePerDiv="1 s / Div", TimeStampFormat="Time", DataGraphDrawAsPoints=0, DataGraphLegendShown=1, DataGraphUniformSampleSpacing=0, DataGraphLegendPosition="124;0", PowerGraphDrawAsPoints=0, PowerGraphLegendShown=0, PowerGraphAvgFilterTime=Off, PowerGraphAvgFilterLen=Off, PowerGraphUniformSampleSpacing=0, PowerGraphLegendPosition="1396;-69", CodeGraphLegendShown=0, CodeGraphLegendPosition="1412;0"
+OpenWindow="Console", DockArea=BOTTOM, x=0, y=0, w=115, h=651, FilterBarShown=0, TotalValueBarShown=0, ToolBarShown=0
 TableHeader="Source Files", SortCol="File", SortOrder="DESCENDING", VisibleCols=["File";"Status";"Size";"#Insts";"Path"], ColWidths=[240;100;100;100;1382]
-TableHeader="Data Sampling Table", SortCol="Index", SortOrder="ASCENDING", VisibleCols=["Index";"Time";" ((s_dmMotor1).para).tor";" ff";" ((s_dmMotor1).para).pos_rad";" s_dmMotor1.ctrl.pos_set";" s_dmMotor1.ctrl.vel_set";" ((s_dmMotor1).para).vel"], ColWidths=[100;100;100;100;100;100;100;100]
-TableHeader="Data Sampling Setup", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Type";"Value";"Min";"Max";"Average";"# Changes";"Min. Change";"Max. Change"], ColWidths=[233;100;144;134;124;154;110;126;126]
+TableHeader="Data Sampling Table", SortCol="None", SortOrder="ASCENDING", VisibleCols=["Index";"Time";" ((s_dmMotor1).para).tor";" ((s_dmMotor1).para).pos_rad";" s_dmMotor1.ctrl.pos_set";" s_dmMotor1.ctrl.vel_set";" ((s_dmMotor1).para).vel";" f_feedforwardTor"], ColWidths=[100;100;100;100;100;100;100;100]
+TableHeader="Data Sampling Setup", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Type";"Value";"Min";"Max";"Average";"# Changes";"Min. Change";"Max. Change"], ColWidths=[233;100;100;100;100;100;110;126;126]
 TableHeader="Power Sampling", SortCol="Index", SortOrder="ASCENDING", VisibleCols=["Index";"Time";"Ch 0"], ColWidths=[100;100;100]
 TableHeader="Registers 1", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Description"], ColWidths=[100;118;294]
-TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[198;236;100;353]
+TableHeader="Watched Data 1", SortCol="Expression", SortOrder="ASCENDING", VisibleCols=["Expression";"Value";"Location";"Refresh"], ColWidths=[198;236;100;158]
 TableHeader="RegisterSelectionDialog", SortCol="None", SortOrder="ASCENDING", VisibleCols=[], ColWidths=[]
 TableHeader="TargetExceptionDialog", SortCol="Name", SortOrder="ASCENDING", VisibleCols=["Name";"Value";"Address";"Description"], ColWidths=[27;27;27;26]
 WatchedExpression="s_dmMotor1", RefreshRate=2, DisplayFormat=DISPLAY_FORMAT_HEX, Window=Watched Data 1
 WatchedExpression="e_mode", RefreshRate=2, Window=Watched Data 1
-WatchedExpression="alpha_est_deg", RefreshRate=2, Window=Watched Data 1
-WatchedExpression="mgl_est", RefreshRate=2, Window=Watched Data 1
-WatchedExpression="mgl", RefreshRate=1, Window=Watched Data 1
-WatchedExpression="sindata", Window=Watched Data 1
-WatchedExpression="ff", Window=Watched Data 1
 WatchedExpression="s_dmMotor1.ctrl.pos_set", Window=Watched Data 1
-WatchedExpression="i_period", Window=Watched Data 1
-WatchedExpression="a_theta", RefreshRate=2, Window=Watched Data 1
-WatchedExpression="omega", Window=Watched Data 1
-WatchedExpression="J", RefreshRate=1, Window=Watched Data 1
-WatchedExpression="B", RefreshRate=1, Window=Watched Data 1
-WatchedExpression="i_ffable", Window=Watched Data 1
+WatchedExpression="u_ffMode", Window=Watched Data 1
+WatchedExpression="f_estJ", Window=Watched Data 1
+WatchedExpression="f_estB", Window=Watched Data 1
+WatchedExpression="a_estG", RefreshRate=1, Window=Watched Data 1
+WatchedExpression="s_posLowpass", RefreshRate=5, Window=Watched Data 1

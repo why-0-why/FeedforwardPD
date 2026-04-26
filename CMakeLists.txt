@@ -57,6 +57,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
         User/Algorithm/alg_lowpass.c
         User/Algorithm/alg_cubicfit.c
         User/Algorithm/alg_inertia.c
+        User/Algorithm/alg_gravity.c
 
         User/Task/task_start.cpp
         User/Task/task_identify.cpp

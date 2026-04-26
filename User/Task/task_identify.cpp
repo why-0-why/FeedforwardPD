@@ -2,14 +2,17 @@
  ******************************************************************************
  * @file           : task_identify.cpp
  * @author         : WHY
- * @date           : 2026-4-14
- * @brief          : 任务层：惯量辨识任务
+ * @date           : 2026-4-26
+ * @brief          : 任务层：辨识任务
  *
- * 辨识模型（去除已知重力前馈后）：
- *     τ - τ_ff = J·α + b·ω
+ * 辨识流程（顺序执行）：
+ *   1. 重力辨识（G_Identifying → G_Ready）
+ *      在 NUM_G_SAMPLES+1 个静止位置依次采集 (pos, tor)，
+ *      调用 alg_gravity 最小二乘求解 τ = θ₁·cos(pos) + θ₂·sin(pos)
  *
- * 在 IDENTIFY 模式下，每毫秒推送一帧电机反馈数据；
- * 缓冲区满后自动触发最小二乘求解，结果写入 s_inertiaIdent。
+ *   2. 惯量辨识（J_Identifying → J_Ready）
+ *      施加正弦激励，去除重力前馈后调用 alg_inertia 最小二乘求解
+ *      τ - τ_ff = J·α + b·ω
  *
  ******************************************************************************
  * @attention
@@ -26,173 +29,176 @@
 #include "dvc_dmMotor.h"
 #include "task_start.h"
 #include "task_ctrl.h"
+#include "alg_gravity.h"
 #include "alg_inertia.h"
 #include "alg_lowpass.h"
-#include  "alg_OLS.h"
 /* Private typedef -----------------------------------------------------------*/
 
 /* Private define ------------------------------------------------------------*/
+#define NUM_G_SAMPLES    10                  /**< 重力辨识采样点数（实际采 NUM_G_SAMPLES+1 个点） */
+#define NUM_J_SAMPLES    INERTIA_SAMPLE_MAX  /**< 惯量辨识采样点数 */
+#define G_SETTLE_MS      1500u               /**< 每个重力采样点的稳定等待时间 (ms) */
+#define J_SAMPLE_PERIOD  75u                 /**< 惯量采样间隔 (ms，以 1ms 循环计) */
 
 /* Private macro -------------------------------------------------------------*/
 
 /* Private variables ---------------------------------------------------------*/
 osThreadId h_TaskIdentify;
-STR_InertiaIdent s_inertiaIdent;
 ENU_IdentifyState e_IdentifyState = G_Identifying;
 
-#define NumGdata 10
-int8_t i_dataCount = NumGdata;
-uint64_t i_timeCount = 0;
+static STR_GravityIdent s_gravityIdent;
+static STR_InertiaIdent s_inertiaIdent;
+static STR_LowPass      s_posLowpass;
 
-float32_t f_startPos = -60.0f * M_PI / 180.0f;
-float32_t f_endPos = 60.0f * M_PI / 180.0f;
-STR_LowPass s_posLowpass;
+static const float32_t f_startPos = -60.0f * M_PI / 180.0f;
+static const float32_t f_endPos   =  60.0f * M_PI / 180.0f;
 
-#define NumJdata INERTIA_SAMPLE_MAX
-static float sinpos[2]={0};
+static float32_t a_sinPos[2] = {0}; /**< 正弦激励：[pos(rad), vel(rad/s)] */
+
 /* Exported variables --------------------------------------------------------*/
 extern STR_dmMotor s_dmMotor1;
-extern ENU_Mode e_mode;
-extern float32_t a_theta[2]; //重力辨识参数，来自 task_ctrl.cpp
-extern float32_t J;
-extern float32_t B;
-extern float32_t ff; //当前重力前馈力矩，来自 task_ctrl.cpp
+extern ENU_Mode    e_mode;
+extern float32_t   a_estG[2];          /**< 重力辨识参数，写入 task_ctrl.cpp */
+extern float32_t   f_estJ;
+extern float32_t   f_estB;
+extern float32_t   f_feedforwardTor;   /**< 当前重力前馈力矩，来自 task_ctrl.cpp */
+
 /* Private function prototypes -----------------------------------------------*/
-static void sin_curve(uint32_t t);
+static void CALC_SinCurve(uint32_t t);
+
+/* Public functions ----------------------------------------------------------*/
 
 void TASK_IdentifyInit()
 {
-    /* 采样周期 1 ms，与 osDelay(1) 一致 */
-    DATA_InertiaInit(&s_inertiaIdent, 0.001f);//创建惯量模型
-    DATA_LowpassInit(&s_posLowpass,1,1000);//创建位置低通滤波器，重力辨识平顺
+    DATA_GravityInit(&s_gravityIdent);
+    DATA_InertiaInit(&s_inertiaIdent, 0.001f);
+    DATA_LowpassInit(&s_posLowpass, 1, 1000);
+
     if (!s_dmMotor1.enable_flag)
     {
         CTRL_dmMotorEnable(&hcan1, &s_dmMotor1);
     }
-    osDelay(200); //等待使能完成
-    s_dmMotor1.ctrl.pos_set = f_endPos - i_dataCount * (f_endPos - f_startPos) / NumGdata;
-    CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1); //回启始位置
-    osDelay(1000); //起始位置多给的时间
-    i_timeCount = HAL_GetTick();
-    /* 定义辨识任务属性 */
+    osDelay(200);
+
+    /* 移动到重力辨识起始位置 */
+    s_dmMotor1.ctrl.pos_set = f_endPos - NUM_G_SAMPLES * (f_endPos - f_startPos) / NUM_G_SAMPLES;
+    DATA_LowpassSet(&s_posLowpass, s_posLowpass.alpha,f_endPos);
+    CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
+
     osThreadDef(TaskIdentify, TASK_Identify, osPriorityNormal, 0, 256);
-    /* 创建辨识任务 */
     h_TaskIdentify = osThreadCreate(osThread(TaskIdentify), NULL);
 }
 
 /**
- * @brief          任务-惯量辨识
- * @param[in]      void
- * @return         void
+ * @brief  任务-辨识（顺序执行：重力辨识 → 惯量辨识）
  */
 void TASK_Identify(void const* argument)
 {
-    float32_t a_posMeas_rad[NumGdata + 1] = {0};
-    float32_t a_torMeas_Nm[NumGdata + 1] = {0}; //X*theta=Y中的Y
-    float32_t a_X[(NumGdata + 1) * 2] = {0}; //X*theta=Y中的X
-    while (e_IdentifyState != G_Ready && e_IdentifyState != Identify_Failure)
+    /* ------------------------------------------------------------------ */
+    /* 阶段一：重力辨识                                                    */
+    /* 依次移动到 NUM_G_SAMPLES+1 个位置，每点稳定后采集 (pos, tor)       */
+    /* ------------------------------------------------------------------ */
+    e_IdentifyState = G_Identifying;
+
+    for (int8_t i = NUM_G_SAMPLES; i >= 0; i--)
     {
-        //电机目标递增，并记录位置与力
-        s_dmMotor1.ctrl.pos_set = DATA_LowpassUpdate(&s_posLowpass,f_endPos - i_dataCount * (f_endPos - f_startPos) / NumGdata);
-        CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
-
-        if (HAL_GetTick() - i_timeCount > 1500)
+        /* 更新目标位置（低通滤波平顺过渡） */
+        s_dmMotor1.ctrl.pos_set=DATA_LowpassUpdate(
+                &s_posLowpass,
+                f_endPos - i * (f_endPos - f_startPos) / NUM_G_SAMPLES);
+        /* 持续发送指令，等待电机稳定 */
+        for (uint32_t t = 0; t < G_SETTLE_MS; t++)
         {
-            i_timeCount = HAL_GetTick();
-
-            a_posMeas_rad[i_dataCount] = s_dmMotor1.para.pos_rad; //记录位置
-            a_torMeas_Nm[i_dataCount] = s_dmMotor1.para.tor; //记录力
-            i_dataCount--;
-
-            if (i_dataCount < 0) //满足退出条件，最小二乘计算模型
-            {
-                float32_t a_posSin[NumGdata + 1] = {0};
-                float32_t a_posCos[NumGdata + 1] = {0};
-                for (int i = 0; i < NumGdata + 1; i++)
-                {
-                    a_posSin[i] = sinf(a_posMeas_rad[i]);
-                    a_posCos[i] = cosf(a_posMeas_rad[i]);
-                }
-
-                for (int i = 0; i < NumGdata + 1; i++)
-                {
-                    a_X[i * 2] = a_posCos[i];
-                    a_X[2 * i + 1] = a_posSin[i];
-                }
-                if (!DATA_OLS(NumGdata + 1, 2, a_X, a_torMeas_Nm, a_theta))//返回0成功
-                {
-                    e_IdentifyState = G_Ready;
-                }
-                else
-                {
-                    e_IdentifyState = Identify_Failure;
-                }
-                //反算
-                // f_mglEst_Nm = sqrt(a_theta[0] * a_theta[0] + a_theta[1] * a_theta[1]);
-                // f_alphaEst_rad = atan2(a_theta[1], a_theta[0]);  // 注意顺序: atan2(b, a)
-                // f_alphaEst_deg = f_alphaEst_rad * 180.0 / M_PI;
-            }
+            s_dmMotor1.ctrl.pos_set = DATA_LowpassUpdate(
+                &s_posLowpass,
+                f_endPos - i * (f_endPos - f_startPos) / NUM_G_SAMPLES);
+            CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
+            osDelay(1);
         }
-        osDelay(1);
+
+        /* 采集当前位置与力矩 */
+        DATA_GravityPushSample(&s_gravityIdent, s_dmMotor1.para.pos_rad, s_dmMotor1.para.tor);
     }
-    TASK_CTRLInit();; //前馈力矩开始
-    i_dataCount = 0;
-    //回到0点等待惯量辨识
-    s_dmMotor1.ctrl.pos_set = 0.0f;
-    CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
-    osDelay(1000);
-    while (e_IdentifyState != J_Ready && e_IdentifyState != Identify_Failure) //惯量辨识
-    {
-        //播放逻辑
-        static uint32_t i_postime = 0;
-        sin_curve(i_postime);
-        s_dmMotor1.ctrl.pos_set = sinpos[0];
-        CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
-        i_postime++;
-        //记录数据逻辑
-        if (i_postime%75==0)
-        {
-            float32_t vel = s_dmMotor1.para.vel/3.0;//有三倍关系
-            float32_t tor = s_dmMotor1.para.tor;
-            float32_t tor_ff = ff; //使用 task_feedforward 实时计算的重力前馈
 
-            DATA_InertiaPushSample(&s_inertiaIdent, vel, tor, tor_ff);
-            i_dataCount++;
-        }
-        if (i_dataCount>=NumJdata&&!DATA_InertiaSolve(&s_inertiaIdent))
+    /* 最小二乘求解重力参数 */
+    if (DATA_GravitySolve(&s_gravityIdent) == 0)
+    {
+        a_estG[0] = s_gravityIdent.theta[0];
+        a_estG[1] = s_gravityIdent.theta[1];
+        e_IdentifyState = G_Ready;
+    }
+    else
+    {
+        e_IdentifyState = Identify_Failure;
+    }
+
+    /* ------------------------------------------------------------------ */
+    /* 阶段二：惯量辨识（仅在重力辨识成功后执行）                         */
+    /* 施加正弦激励，按固定间隔采集 (vel, tor, tor_ff)                    */
+    /* ------------------------------------------------------------------ */
+    if (e_IdentifyState == G_Ready)
+    {
+        TASK_CTRLInit(); /* 启动控制任务，开始输出重力前馈 */
+
+        s_dmMotor1.ctrl.pos_set = 0.0f;
+        CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
+        osDelay(1000);
+
+        e_IdentifyState = J_Identifying;
+
+        for (uint32_t t = 0, n = 0; n < NUM_J_SAMPLES; t++)
         {
-            e_IdentifyState = J_Ready;
-            J=s_inertiaIdent.J_est;
-            B=s_inertiaIdent.b_est;
+            CALC_SinCurve(t);
+            s_dmMotor1.ctrl.pos_set = a_sinPos[0];
+            CTRL_dmMotorCtrl(&hcan1, &s_dmMotor1);
+
+            /* 每隔 J_SAMPLE_PERIOD ms 采集一帧 */
+            if (t % J_SAMPLE_PERIOD == 0)
+            {
+                DATA_InertiaPushSample(&s_inertiaIdent,
+                                       s_dmMotor1.para.vel / 3.0f,
+                                       s_dmMotor1.para.tor,
+                                       f_feedforwardTor);
+                n++;
+            }
+            osDelay(1);
         }
-        else if (i_dataCount>=NumJdata)
+
+        /* 最小二乘求解惯量参数 */
+        if (DATA_InertiaSolve(&s_inertiaIdent) == 0)
+        {
+            f_estJ = s_inertiaIdent.J_est;
+            f_estB = s_inertiaIdent.b_est;
+            e_IdentifyState = J_Ready;
+        }
+        else
         {
             e_IdentifyState = Identify_Failure;
         }
-
-        osDelay(1);
     }
 
-    //辨识失败数据清除
+    /* ------------------------------------------------------------------ */
+    /* 收尾                                                                */
+    /* ------------------------------------------------------------------ */
     if (e_IdentifyState == Identify_Failure)
     {
-        a_theta[0]=0;
-        a_theta[1]=0;
+        a_estG[0] = 0.0f;
+        a_estG[1] = 0.0f;
     }
+
     osDelay(100);
-    e_mode = NORMAL; //进入正常模式
-    osThreadTerminate(h_TaskIdentify);//任务完成,删除本任务
+    e_mode = NORMAL;
+    osThreadTerminate(h_TaskIdentify);
 }
 
 /**
- * @param t 时间，单位ms
- * @return 按时间运行的正弦曲线
+ * @brief  生成正弦激励曲线，结果写入 a_sinPos
+ * @param  t  时间，单位 ms
  */
-void sin_curve(uint32_t t)
+static void CALC_SinCurve(uint32_t t)
 {
-    static float omega1=2*M_PI/3;//sin曲线角速度
-    static float amp1=M_PI;//幅值
-
-    sinpos[0]=amp1*sinf(omega1*t/1000.0f);
-    sinpos[1]=amp1*omega1*cosf(omega1*t/1000.0f);
+    static const float32_t f_omega = 2.0f * M_PI / 3.0f;
+    static const float32_t f_amp   = M_PI;
+    a_sinPos[0] = f_amp * sinf(f_omega * t / 1000.0f);
+    a_sinPos[1] = f_amp * f_omega * cosf(f_omega * t / 1000.0f);
 }
